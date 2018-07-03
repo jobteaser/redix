@@ -87,7 +87,7 @@ defmodule Redix.Utils do
     socket_opts = @socket_opts ++ Keyword.fetch!(opts, :socket_opts)
     timeout = opts[:timeout] || @default_timeout
 
-    with {:ok, socket} <- :gen_tcp.connect(host, port, socket_opts, timeout),
+    with {:ok, socket} <- Redix.Connection.Adapter.connect(host, port, socket_opts, timeout),
          :ok <- setup_socket_buffers(socket) do
       result =
         with :ok <- if(opts[:password], do: auth(socket, opts[:password]), else: :ok),
@@ -108,9 +108,9 @@ defmodule Redix.Utils do
 
   # Setups the `:buffer` option of the given socket.
   defp setup_socket_buffers(socket) do
-    with {:ok, opts} <- :inet.getopts(socket, [:sndbuf, :recbuf, :buffer]) do
+    with {:ok, opts} <- Redix.Connection.Adapter.getopts(socket, [:sndbuf, :recbuf, :buffer]) do
       [sndbuf: sndbuf, recbuf: recbuf, buffer: buffer] = opts
-      :inet.setopts(socket, buffer: buffer |> max(sndbuf) |> max(recbuf))
+      Redix.Connection.Adapter.setopts(socket, buffer: buffer |> max(sndbuf) |> max(recbuf))
     end
   end
 
@@ -139,12 +139,12 @@ defmodule Redix.Utils do
   end
 
   defp auth(socket, password) do
-    with :ok <- :gen_tcp.send(socket, Redix.Protocol.pack(["AUTH", password])),
+    with :ok <- Redix.Connection.Adapter.send(socket, Redix.Protocol.pack(["AUTH", password])),
          do: recv_ok_response(socket)
   end
 
   defp select(socket, database) do
-    with :ok <- :gen_tcp.send(socket, Redix.Protocol.pack(["SELECT", database])),
+    with :ok <- Redix.Connection.Adapter.send(socket, Redix.Protocol.pack(["SELECT", database])),
          do: recv_ok_response(socket)
   end
 
@@ -153,7 +153,7 @@ defmodule Redix.Utils do
   end
 
   defp recv_ok_response(socket, continuation) do
-    with {:ok, data} <- :gen_tcp.recv(socket, 0) do
+    with {:ok, data} <- Redix.Connection.Adapter.recv(socket, 0) do
       parser = continuation || (&Redix.Protocol.parse/1)
 
       case parser.(data) do

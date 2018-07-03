@@ -64,7 +64,7 @@ defmodule Redix.ConnectionError do
   end
 
   def format_reason(reason) do
-    case :inet.format_error(reason) do
+    case Redix.Connection.Adapter.format_error(reason) do
       'unknown POSIX error' ->
         inspect(reason)
 

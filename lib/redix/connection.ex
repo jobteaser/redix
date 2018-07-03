@@ -162,7 +162,7 @@ defmodule Redix.Connection do
       Exception.message(error)
     ])
 
-    :ok = :gen_tcp.close(state.socket)
+    :ok = Redix.Connection.Adapter.close(state.socket)
 
     # state.receiver may be nil if we already processed the message where it
     # notifies us it stopped. If it's not nil, it means we noticed the TCP error
@@ -212,7 +212,7 @@ defmodule Redix.Connection do
 
     data = Enum.map(commands, &Protocol.pack/1)
 
-    case :gen_tcp.send(state.socket, data) do
+    case Redix.Connection.Adapter.send(state.socket, data) do
       :ok ->
         {:noreply, state}
 
@@ -297,8 +297,8 @@ defmodule Redix.Connection do
     # We activate the socket after transferring control to the receiver
     # process, so that we don't get any :tcp_closed messages before
     # transferring control.
-    with :ok <- :gen_tcp.controlling_process(socket, receiver),
-         :ok <- :inet.setopts(socket, active: :once),
+    with :ok <- Redix.Connection.Adapter.controlling_process(socket, receiver),
+         :ok <- Redix.Connection.Adapter.setopts(socket, active: :once),
          do: {:ok, receiver}
   end
 
